@@ -1,0 +1,65 @@
+version: '3.8'
+
+services:
+  api:
+    build:
+      context: .
+      dockerfile: ./apps/api/Dockerfile
+    ports:
+      - "3002:3002"
+    environment:
+      # Required ENVs
+      NUM_WORKERS_PER_QUEUE: 8
+      PORT: 3002
+      HOST: 0.0.0.0
+      REDIS_URL: redis://redis:6379
+      REDIS_RATE_LIMIT_URL: redis://redis:6379
+      PLAYWRIGHT_MICROSERVICE_URL: http://playwright-service-ts:3000/scrape
+      USE_DB_AUTHENTICATION: "false" # Set to "true" if Supabase is fully configured for auth
+
+      # Optional ENVs (You will need to fill in the actual values)
+      SUPABASE_ANON_TOKEN: "${SUPABASE_ANON_TOKEN}"
+      SUPABASE_URL: "${SUPABASE_URL}"
+      SUPABASE_SERVICE_TOKEN: "${SUPABASE_SERVICE_TOKEN}"
+      TEST_API_KEY: "${TEST_API_KEY}"
+      RATE_LIMIT_TEST_API_KEY_SCRAPE: "${RATE_LIMIT_TEST_API_KEY_SCRAPE}"
+      RATE_LIMIT_TEST_API_KEY_CRAWL: "${RATE_LIMIT_TEST_API_KEY_CRAWL}"
+      OPENAI_API_KEY: "${OPENAI_API_KEY}"
+      BULL_AUTH_KEY: "${BULL_AUTH_KEY}" # Make sure to set a strong key
+      LOGTAIL_KEY: "${LOGTAIL_KEY}"
+      LLAMAPARSE_API_KEY: "${LLAMAPARSE_API_KEY}"
+      SLACK_WEBHOOK_URL: "${SLACK_WEBHOOK_URL}"
+      POSTHOG_API_KEY: "${POSTHOG_API_KEY}"
+      POSTHOG_HOST: "${POSTHOG_HOST}"
+      FIRE_ENGINE_BETA_URL: "${FIRE_ENGINE_BETA_URL}" # Only if you have access to the closed beta
+      PROXY_SERVER: "${PROXY_SERVER}" # If using a proxy
+      PROXY_USERNAME: "${PROXY_USERNAME}"
+      PROXY_PASSWORD: "${PROXY_PASSWORD}"
+      BLOCK_MEDIA: "${BLOCK_MEDIA}" # "true" or "false"
+      SELF_HOSTED_WEBHOOK_URL: "${SELF_HOSTED_WEBHOOK_URL}" # Set this to your Firecrawl webhook URL
+      RESEND_API_KEY: "${RESEND_API_KEY}"
+      LOGGING_LEVEL: "INFO" # Can be NONE, ERROR, WARN, INFO, DEBUG, TRACE
+    depends_on:
+      - redis
+      - playwright-service-ts
+    restart: always
+
+  playwright-service-ts:
+    build:
+      context: .
+      dockerfile: ./apps/playwright-service-ts/Dockerfile
+    ports:
+      - "3000:3000" # Exposing for internal communication within Docker network
+    environment:
+      # Optional ENVs for Playwright (if needed, e.g., proxy settings)
+      PROXY_SERVER: "${PROXY_SERVER}" # If using a proxy
+      PROXY_USERNAME: "${PROXY_USERNAME}"
+      PROXY_PASSWORD: "${PROXY_PASSWORD}"
+      BLOCK_MEDIA: "${BLOCK_MEDIA}" # "true" or "false"
+    restart: always
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379" # Exposing for internal communication within Docker network
+    restart: always
